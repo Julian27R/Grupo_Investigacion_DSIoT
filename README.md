@@ -1,7 +1,3 @@
-Aquí tienes un **README.md en español**, limpio y listo para **copiar y pegar directamente en GitHub**. Incluye estructura clara, bloques de código y la arquitectura del proyecto.
-
----
-
 # BeaglePlay ThingsBoard Gateway (WSL + MQTT)
 
 ## Descripción
