@@ -1,290 +1,311 @@
-# BeaglePlay ThingsBoard Gateway (WSL + MQTT)
+# 🖥️ Servidor Local con Ubuntu + Docker Compose
 
-## Descripción
+## 📌 Descripción del proyecto
 
-Este proyecto implementa un **Gateway de ThingsBoard** que se ejecuta en un dispositivo **BeaglePlay** (simulado inicialmente en WSL).
-
-El gateway permitirá conectar dispositivos IoT como **ESP32** a la plataforma **ThingsBoard** utilizando **MQTT**.
-
-El objetivo es centralizar la comunicación de múltiples dispositivos IoT mediante un gateway intermedio.
+Este proyecto consiste en la configuración de un **servidor local** sobre una mini-PC utilizando **Ubuntu 22.04.5 LTS** y **Docker Compose**, con el objetivo de desplegar servicios de manera modular, escalable y reproducible.
 
 ---
 
-# Arquitectura del sistema
+# 🧠 1. ¿Qué es un servidor?
 
-La arquitectura general del sistema es la siguiente:
+Un **servidor** es un sistema que proporciona servicios a otros dispositivos (clientes) dentro de una red.
 
-```
-ESP32 → Mosquitto Broker → BeaglePlay Gateway → ThingsBoard
-```
+### Ejemplos de servicios:
 
-Donde:
-
-* **ESP32**: Dispositivo IoT que envía telemetría.
-* **Mosquitto**: Broker MQTT que recibe los mensajes.
-* **BeaglePlay**: Ejecuta el ThingsBoard Gateway.
-* **ThingsBoard**: Plataforma IoT para visualización y gestión de dispositivos.
+* Servidor web (nginx, Apache)
+* Servidor IoT (MQTT, Node-RED)
+* Base de datos
+* Sistemas distribuidos (ROS2)
 
 ---
 
-# 1. Preparación del entorno Linux
+# 🐧 2. Sistema Operativo: Ubuntu 22.04.5 LTS
 
-Se utiliza **WSL (Windows Subsystem for Linux)** para trabajar con un entorno Linux dentro de Windows.
+### ¿Qué significa LTS?
 
-Verificar versión de Python:
+**LTS (Long Term Support)** garantiza:
 
-```bash
-python3 --version
-```
+* Soporte por 5 años
+* Estabilidad
+* Actualizaciones de seguridad
 
-Instalar dependencias necesarias:
+Ideal para servidores.
+
+---
+
+# 🔄 3. Actualización del sistema
+
+Después de instalar Ubuntu, es fundamental actualizar los paquetes.
 
 ```bash
 sudo apt update
-sudo apt install python3 python3-pip python3-venv
+sudo apt upgrade -y
 ```
+
+### Explicación:
+
+* `apt update`: actualiza la lista de paquetes disponibles
+* `apt upgrade`: instala actualizaciones
 
 ---
 
-# 2. Crear directorio del proyecto
+# 🌐 4. Verificación de red
+
+Para identificar la IP del servidor:
 
 ```bash
-mkdir ~/InvesIoT
-cd ~/InvesIoT
+ip a
 ```
 
-Crear carpeta para la configuración del gateway:
+Buscar:
+
+```
+inet 192.168.x.x
+```
+
+### ¿Qué es una IP?
+
+Es la dirección única que identifica un dispositivo en la red.
+
+---
+
+# 🔐 5. Acceso remoto con SSH
+
+SSH permite controlar el servidor de forma remota.
+
+## Instalación:
 
 ```bash
-mkdir tb-gateway-config
-cd tb-gateway-config
+sudo apt install openssh-server -y
 ```
 
----
-
-# 3. Crear entorno virtual de Python
-
-Debido a la restricción **PEP 668 (externally-managed-environment)** se debe usar un entorno virtual.
-
-Crear entorno virtual:
+## Verificación:
 
 ```bash
-python3 -m venv tb-gateway-env
+sudo systemctl status ssh
 ```
 
-Activar entorno virtual:
+## Conexión desde otro equipo:
 
 ```bash
-source tb-gateway-env/bin/activate
-```
-
-Cuando el entorno esté activo verás algo así en la terminal:
-
-```
-(tb-gateway-env)
+ssh usuario@IP_SERVIDOR
 ```
 
 ---
 
-# 4. Instalar ThingsBoard Gateway
+# 🐳 6. Docker
 
-Instalar el gateway usando pip:
+## ¿Qué es Docker?
+
+Docker es una plataforma que permite ejecutar aplicaciones en **contenedores**.
+
+### Contenedor:
+
+Un entorno aislado que incluye:
+
+* aplicación
+* dependencias
+* configuración
+
+---
+
+## Instalación (si no está instalado)
 
 ```bash
-pip install thingsboard-gateway
+sudo apt install docker.io -y
 ```
 
-Verificar instalación:
+## Verificar instalación
 
 ```bash
-pip list | grep tb
-```
-
-Salida esperada:
-
-```
-tb-mqtt-client
-tb-paho-mqtt-client
-thingsboard-gateway
+docker --version
 ```
 
 ---
 
-# 5. Crear Gateway en ThingsBoard
-
-Ingresar a la plataforma:
-
-```
-https://thingsboard.cloud
-```
-
-Luego ir a:
-
-```
-Devices → Add Device
-```
-
-Configurar:
-
-Nombre del dispositivo:
-
-```
-BeaglePlay-Gateway
-```
-
-Activar la opción:
-
-```
-Is Gateway ✓
-```
-
-Guardar y copiar el **Access Token** generado.
-
-Ejemplo:
-
-```
-yMf6LyV37kY4nFMAeuER
-```
-
----
-
-# 6. Crear archivo de configuración del gateway
-
-Crear el archivo:
+## Activar servicio
 
 ```bash
-nano tb_gateway.json
+sudo systemctl enable docker
+sudo systemctl start docker
 ```
-
-Contenido del archivo:
-
-```json
-{
-  "thingsboard": {
-    "host": "thingsboard.cloud",
-    "port": 1883,
-    "security": {
-      "accessToken": "YOUR_ACCESS_TOKEN"
-    }
-  },
-  "storage": {
-    "type": "memory"
-  },
-  "connectors": [],
-  "grpc": {
-    "enabled": false
-  }
-}
-```
-
-Reemplazar:
-
-```
-YOUR_ACCESS_TOKEN
-```
-
-por el token generado en ThingsBoard.
 
 ---
 
-# 7. Ejecutar el gateway
-
-Iniciar el gateway con:
+## Ejecutar prueba
 
 ```bash
-python -m thingsboard_gateway.tb_gateway -c tb_gateway.json
-```
-
-Salida esperada en consola:
-
-```
-Gateway starting...
-ThingsBoard IoT gateway version: 3.8.2
-Connecting to ThingsBoard...
-MQTT client connected to platform
-Gateway connected
+docker run hello-world
 ```
 
 ---
 
-# 8. Verificar conexión en ThingsBoard
+# ⚙️ 7. Docker Compose
 
-Ir a:
+## ¿Qué es Docker Compose?
 
+Permite definir y ejecutar múltiples contenedores usando un archivo YAML.
+
+---
+
+## Verificar instalación
+
+```bash
+docker compose version
 ```
-ThingsBoard → Devices
-```
 
-Seleccionar:
+## Instalación (si no está disponible)
 
-```
-BeaglePlay-Gateway
-```
-
-El estado debe aparecer como:
-
-```
-Active
+```bash
+sudo apt install docker-compose-plugin -y
 ```
 
 ---
 
-# 9. Advertencias normales en el log
+# 🔓 8. Ejecutar Docker sin sudo
 
-Es normal ver el siguiente mensaje:
-
-```
-Connectors - not found, waiting for remote configuration
-```
-
-Esto significa que **aún no se ha configurado ningún conector**.
-
-Posteriormente se agregará un **MQTT Connector** para recibir datos desde Mosquitto.
-
----
-
-# 10. Próximos pasos
-
-Las siguientes etapas del proyecto incluyen:
-
-1. Instalar **Mosquitto MQTT Broker**
-2. Configurar el **MQTT Connector** en ThingsBoard Gateway
-3. Conectar dispositivos **ESP32**
-4. Enviar telemetría a ThingsBoard
-5. Crear dashboards de visualización
-
-Arquitectura final del sistema:
-
-```
-ESP32 → MQTT (Mosquitto) → BeaglePlay Gateway → ThingsBoard Dashboard
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
 ---
 
-# Tecnologías utilizadas
+# 📁 9. Estructura del servidor
 
-* ESP32
-* BeaglePlay
+Se recomienda organizar los servicios:
+
+```bash
+mkdir -p ~/server/nginx
+cd ~/server/nginx
+```
+
+Estructura sugerida:
+
+```
+server/
+ ├── nginx/
+ ├── iot/
+ ├── db/
+ └── monitoring/
+```
+
+---
+
+# 🌍 10. Primer servicio: NGINX
+
+## Crear archivo docker-compose.yml
+
+```bash
+nano docker-compose.yml
+```
+
+## Contenido:
+
+```yaml
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+```
+
+---
+
+## Explicación:
+
+* `image`: imagen base
+* `container_name`: nombre del contenedor
+* `ports`: mapeo de puertos (host:contenedor)
+* `restart`: política de reinicio
+
+---
+
+# ▶️ 11. Levantar el servicio
+
+```bash
+docker compose up -d
+```
+
+### Parámetro:
+
+* `-d`: modo background
+
+---
+
+# 🔍 12. Verificar contenedores
+
+```bash
+docker ps
+```
+
+---
+
+# 🌐 13. Acceso al servicio
+
+Desde navegador:
+
+```
+http://IP_SERVIDOR:8080
+```
+
+---
+
+# 📊 14. Comandos útiles
+
+## Ver contenedores activos
+
+```bash
+docker ps
+```
+
+## Ver todos los contenedores
+
+```bash
+docker ps -a
+```
+
+## Detener servicios
+
+```bash
+docker compose down
+```
+
+## Ver logs
+
+```bash
+docker compose logs
+```
+
+---
+
+# 🧱 15. Ventajas de Docker Compose
+
+* Aislamiento de servicios
+* Escalabilidad
+* Reproducibilidad
+* Portabilidad
+* Fácil mantenimiento
+
+---
+
+# 🚀 16. Próximos pasos
+
+Posibles extensiones del servidor:
+
+* MQTT (Mosquitto)
+* Node-RED
+* InfluxDB + Grafana
 * ThingsBoard
-* MQTT
-* Mosquitto
-* Python
-* WSL (Linux)
+* ROS2 distribuido
 
 ---
 
-# Autor
+# 👨‍💻 Autor
 
-**Julian Felipe**
-
-Proyecto IoT basado en arquitectura de gateway para integración de dispositivos embebidos con plataformas IoT.
+Proyecto desarrollado por Julián Felipe
+Enfocado en sistemas embebidos, IoT y servidores locales.
 
 ---
-
-Si quieres, también puedo ayudarte a hacer una **versión aún más profesional del README para GitHub** con:
-
-* badges
-* diagramas de arquitectura
-* estructura de carpetas del proyecto
-* guía para **ESP32 enviando datos a ThingsBoard**
-* dashboards de ejemplo.
