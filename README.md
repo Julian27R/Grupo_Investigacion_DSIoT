@@ -1,126 +1,169 @@
-# 🖥️ Servidor Local con Ubuntu + Docker Compose
+# 🖥️ Servidor IoT Local con Ubuntu, Docker y ThingsBoard
 
-## 📌 Descripción del proyecto
-
-Configuración de un **servidor local en mini-PC** usando Ubuntu 22.04.5 LTS y Docker Compose, orientado a servicios IoT y web.
+> Proyecto de aprendizaje para montar un servidor local completo con capacidades IoT, usando un mini-PC, contenedores Docker y la plataforma ThingsBoard.
 
 ---
 
-# 🧠 1. ¿Qué es un servidor?
+## 📌 ¿Qué hace este proyecto?
 
-Un servidor es un sistema que proporciona servicios a otros dispositivos en una red.
+Este proyecto te guía paso a paso para convertir un mini-PC con Ubuntu en un **servidor local IoT** capaz de:
 
-Ejemplos:
+- Recibir datos de sensores (reales o simulados)
+- Visualizarlos en dashboards en tiempo real
+- Ser accesible desde cualquier dispositivo en la misma red
 
-* Web (nginx)
-* IoT (ThingsBoard, MQTT)
-* Bases de datos
-
----
-
-# 🐧 2. Sistema Operativo
-
-Ubuntu 22.04.5 LTS
-
-**LTS (Long Term Support):**
-
-* 5 años de soporte
-* Alta estabilidad
-* Ideal para servidores
+No necesitas experiencia previa — cada sección explica el concepto antes de ejecutar comandos.
 
 ---
 
-# 🔄 3. Actualización del sistema
+## 🧠 Conceptos clave (léelos antes de empezar)
 
+### ¿Qué es un servidor?
+Un servidor es un computador que ofrece servicios a otros dispositivos en la red. En este proyecto, tu mini-PC será el servidor.
+
+### ¿Qué es Docker?
+Docker permite "empaquetar" programas en **contenedores** — como cajas selladas que incluyen todo lo necesario para que una aplicación funcione, sin afectar el resto del sistema.
+
+### ¿Qué es IoT?
+IoT (Internet of Things) es la red de dispositivos físicos (sensores, microcontroladores) que envían datos a través de internet o redes locales.
+
+### ¿Qué es ThingsBoard?
+ThingsBoard es una plataforma de código abierto para recibir, gestionar y visualizar datos IoT desde dispositivos conectados.
+
+---
+
+## 🧱 Arquitectura del sistema
+```
+[Simulador Python o Dispositivo Real]
+              │
+              │  HTTP o MQTT
+              ▼
+     ThingsBoard (Docker, puerto 8080)
+              │
+              ▼
+       Dashboard Web (navegador)
+
+Mini-PC (Servidor)
+├── Puerto 8080 → ThingsBoard (IoT)
+└── Puerto 8090 → NGINX (Web)
+```
+
+---
+
+## ⚙️ Tecnologías utilizadas
+
+| Tecnología | Función |
+|---|---|
+| Ubuntu 22.04 LTS | Sistema operativo del servidor |
+| Docker + Docker Compose | Gestión de contenedores |
+| ThingsBoard Edge | Plataforma IoT |
+| NGINX | Servidor web |
+| Python 3 | Simulador de dispositivos IoT |
+| SSH / VS Code Remote | Acceso remoto al servidor |
+
+---
+
+## 🖥️ Paso 1 — Preparar Ubuntu
+
+Ubuntu 22.04 LTS es la versión recomendada para servidores por su estabilidad y 5 años de soporte oficial.
+
+### Actualizar el sistema
+
+Siempre empieza actualizando los paquetes instalados:
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
----
+### Identificar la IP del servidor
 
-# 🌐 4. Identificación de red
-
+La dirección IP es el identificador del servidor dentro de tu red local. La necesitarás para conectarte desde otros dispositivos.
 ```bash
 ip a
 ```
 
-Buscar una línea como:
-
-```text
+Busca una línea como esta:
+```
 inet 172.20.25.173/21
 ```
 
-👉 Esta es la IP del servidor.
+> 📌 Anota esta IP — la usarás en todos los pasos siguientes.
 
 ---
 
-## 🧠 Concepto: Dirección IP
+## 🔐 Paso 2 — Acceso remoto con SSH
 
-Es el identificador único de un dispositivo dentro de una red.
+SSH te permite controlar el servidor desde otro computador sin necesidad de teclado ni monitor conectados.
 
-Ejemplo:
-
-```text
-Servidor → 172.20.25.173
-```
-
----
-
-# 🔐 5. Acceso remoto (SSH)
-
+### Instalar SSH
 ```bash
 sudo apt install openssh-server -y
 ```
 
-Verificar:
-
+### Verificar que está activo
 ```bash
 sudo systemctl status ssh
 ```
 
-Conexión desde otro equipo:
+Debe decir `active (running)`.
 
+### Conectarse desde otro equipo
 ```bash
-ssh usuario@IP_SERVIDOR
+ssh tu_usuario@IP_DEL_SERVIDOR
+# Ejemplo:
+ssh pci@172.20.25.173
 ```
 
 ---
 
-# 🐳 6. Docker
+## 💻 Paso 3 (opcional) — Conectar VS Code al servidor
 
-Verificar instalación:
+VS Code permite editar archivos directamente en el servidor de forma visual.
 
+1. Instala la extensión **Remote - SSH** en VS Code
+2. Edita el archivo de configuración SSH:
+```bash
+nano ~/.ssh/config
+```
+
+Agrega esto:
+```
+Host servidor-iot
+    HostName 172.20.25.173
+    User pci
+```
+
+3. En VS Code: `Ctrl + Shift + P` → `Remote-SSH: Connect to Host` → selecciona `servidor-iot`
+
+---
+
+## 🐳 Paso 4 — Instalar Docker y Docker Compose
+
+Docker es el motor que ejecutará todos los servicios del servidor como contenedores aislados.
+
+### Verificar si Docker ya está instalado
 ```bash
 docker --version
-```
-
-Prueba:
-
-```bash
-docker run hello-world
-```
-
----
-
-# ⚙️ 7. Docker Compose
-
-Verificar:
-
-```bash
 docker compose version
 ```
 
-Instalar si es necesario:
-
+### Instalar Docker Compose (si no está disponible)
 ```bash
 sudo apt install docker-compose-plugin -y
 ```
 
+### Probar que Docker funciona
+```bash
+docker run hello-world
+```
+
+Si ves un mensaje de bienvenida, Docker está funcionando correctamente.
+
 ---
 
-# 📁 8. Estructura del servidor
+## 📁 Paso 5 — Crear la estructura de carpetas
 
+Organizamos los servicios en carpetas separadas:
 ```bash
 mkdir -p ~/server/nginx
 cd ~/server/nginx
@@ -128,10 +171,16 @@ cd ~/server/nginx
 
 ---
 
-# 🌍 9. Servicio Web con NGINX
+## 🌍 Paso 6 — Levantar NGINX (servidor web)
 
-## docker-compose.yml
+NGINX es un servidor web liviano. Lo usaremos como punto de entrada web en el puerto 8090.
 
+### Crear el archivo `docker-compose.yml`
+```bash
+nano ~/server/nginx/docker-compose.yml
+```
+
+Contenido del archivo:
 ```yaml
 services:
   nginx:
@@ -142,484 +191,296 @@ services:
     restart: unless-stopped
 ```
 
----
+> `"8090:80"` significa: el puerto 80 del contenedor se expone como 8090 en el servidor.
 
-## ▶️ Levantar servicio
-
+### Levantar el servicio
 ```bash
 docker compose up -d
 ```
 
----
+La bandera `-d` significa "en segundo plano" (detached).
 
-## 🔍 Verificar contenedores
-
+### Verificar que está corriendo
 ```bash
 docker ps
 ```
 
-Debe aparecer:
-
-```text
-nginx_web_server → 0.0.0.0:8090->80/tcp
-thingsboard-edge → 0.0.0.0:8080->8080/tcp
+Deberías ver algo así:
+```
+CONTAINER ID   IMAGE          PORTS                  NAMES
+xxxxxxxxxxxx   nginx:latest   0.0.0.0:8090->80/tcp   nginx_web_server
 ```
 
 ---
 
-# 🌐 10. Acceso a servicios
+## 📡 Paso 7 — Desplegar ThingsBoard (plataforma IoT)
 
-## ThingsBoard
+ThingsBoard recibirá los datos de los sensores y los mostrará en dashboards.
 
-```text
-http://IP_SERVIDOR:8080
+### Descargar la imagen
+```bash
+docker pull thingsboard/tb-edge
 ```
 
-## NGINX
-
-```text
-http://IP_SERVIDOR:8090
+### Ejecutar el contenedor
+```bash
+docker run -it -p 8080:8080 -p 1883:1883 -p 5683:5683 \
+  --name tb-edge \
+  thingsboard/tb-edge
 ```
 
----
+Los puertos expuestos son:
+- `8080` → interfaz web
+- `1883` → protocolo MQTT
+- `5683` → protocolo CoAP
 
-# 🔥 11. Prueba desde otros dispositivos
-
-Desde celular o laptop en la misma red:
-
-```text
+### Acceder desde el navegador
+```
+http://IP_DEL_SERVIDOR:8080
+# Ejemplo:
 http://172.20.25.173:8080
-http://172.20.25.173:8090
 ```
+
+### Credenciales por defecto
+```
+Usuario:    tenant@thingsboard.org
+Contraseña: tenant
+```
+
+> ⚠️ Cambia la contraseña en producción.
 
 ---
 
-# ⚠️ 12. Solución de problemas
+## 🔑 Paso 8 — Crear un dispositivo IoT en ThingsBoard
 
-## 🔸 Verificar servicio local
+Antes de enviar datos, debes registrar el dispositivo:
 
+1. Entra a ThingsBoard → sección **Devices**
+2. Haz clic en **Add Device**
+3. Asigna un nombre, por ejemplo: `Sensor_Prueba_1`
+4. Entra al dispositivo creado → pestaña **Credentials**
+5. Copia el **Access Token** — lo necesitarás en el simulador
+
+---
+
+## 🧪 Paso 9 — Simular un dispositivo IoT
+
+Simulamos un sensor que envía temperatura, humedad y presión cada 3 segundos.
+
+### Instalar dependencias de Python
 ```bash
-curl http://localhost:8090
+pip3 install requests paho-mqtt
 ```
 
 ---
 
-## 🔸 Verificar puertos ocupados
+### Opción A: Envío por HTTP (más sencillo)
 
-```bash
-sudo lsof -i :8080
-sudo lsof -i :8090
-```
-
----
-
-## 🔸 Ver contenedores activos
-
-```bash
-docker ps
-```
-
----
-
-## 🔸 Problemas comunes
-
-### ❌ Puerto ocupado
-
-Error:
-
-```text
-port is already allocated
-```
-
-Solución:
-
-* Cambiar puerto
-* Detener contenedor existente
-
----
-
-### ❌ No abre desde otro dispositivo
-
-Posibles causas:
-
-* Firewall
-* Red diferente
-* Hotspot o red restringida
-
----
-
-# 🧠 13. Arquitectura actual
-
-```text
-Mini-PC (Servidor)
-│
-├── Puerto 8080 → ThingsBoard (IoT)
-└── Puerto 8090 → nginx (web)
-```
-
----
-
-# 🚀 14. Comandos útiles
-
-```bash
-docker ps
-docker compose up -d
-docker compose down
-docker compose logs
-```
-
----
-
-# 🔥 15. Próximos pasos
-
-* Reverse proxy con nginx
-* Integración con Node-RED
-* MQTT (Mosquitto)
-* Dashboards (Grafana)
-* Arquitectura IoT completa
-
----
-
-# 👨‍💻 Autor
-
-Julián Felipe
-Proyecto enfocado en IoT, sistemas embebidos y servidores locales.
-
----
-
-# 🖥️ Servidor IoT Local con Ubuntu, Docker y ThingsBoard
-
-## 📌 Descripción del Proyecto
-
-Este proyecto consiste en la implementación de un **servidor local IoT** utilizando un mini-PC con **Ubuntu 22.04 LTS**, contenedores Docker y la plataforma ThingsBoard para la gestión y visualización de datos.
-
-El sistema permite simular dispositivos IoT que envían datos en tiempo real y visualizar dichos datos mediante dashboards.
-
----
-
-## 🧠 1. Arquitectura del Sistema
-
-```
-[Simulador IoT (Python)]
-            │
-            ▼
-     (HTTP / MQTT)
-            │
-            ▼
-   ThingsBoard (Docker)
-            │
-            ▼
-      Dashboard Web
-```
-
----
-
-## 🖥️ 2. Sistema Operativo
-
-* Ubuntu 22.04.5 LTS
-* Soporte a largo plazo (5 años)
-* Estable y optimizado para servidores
-
-### 🔄 Actualización del sistema
-
-```bash
-sudo apt update
-sudo apt upgrade -y
-```
-
----
-
-## 🌐 3. Configuración de Red
-
-Identificar la IP del servidor:
-
-```bash
-ip a
-```
-
-Ejemplo:
-
-```
-inet 172.20.28.165/21
-```
-
----
-
-## 🔐 4. Acceso Remoto (SSH)
-
-### Instalación:
-
-```bash
-sudo apt install openssh-server -y
-```
-
-### Verificación:
-
-```bash
-sudo systemctl status ssh
-```
-
-### Conexión:
-
-```bash
-ssh pci@172.20.28.165
-```
-
----
-
-## 💻 5. Integración con VS Code
-
-Se utiliza **Remote - SSH** para trabajar directamente sobre el servidor.
-
-### Configuración SSH:
-
-Editar archivo:
-
-```bash
-nano ~/.ssh/config
-```
-
-Agregar:
-
-```
-Host servidor-iot
-    HostName 172.20.28.165
-    User pci
-```
-
-### Conexión desde VS Code:
-
-* `Ctrl + Shift + P`
-* `Remote-SSH: Connect to Host`
-* Seleccionar: `servidor-iot`
-
----
-
-## 🐳 6. Docker
-
-### Verificación:
-
-```bash
-docker --version
-```
-
-### Prueba:
-
-```bash
-docker run hello-world
-```
-
----
-
-## ⚙️ 7. Docker Compose
-
-### Verificación:
-
-```bash
-docker compose version
-```
-
-### Instalación:
-
-```bash
-sudo apt install docker-compose-plugin -y
-```
-
----
-
-## 📁 8. Estructura del Proyecto
-
-```bash
-~/server/nginx
-```
-
----
-
-## 🌍 9. Servidor Web con NGINX
-
-### docker-compose.yml
-
-```yaml
-services:
-  nginx:
-    image: nginx:latest
-    container_name: nginx_web_server
-    ports:
-      - "8090:80"
-    restart: unless-stopped
-```
-
-### Levantar servicio:
-
-```bash
-docker compose up -d
-```
-
-### Ver contenedores:
-
-```bash
-docker ps
-```
-
----
-
-## 📡 10. Plataforma IoT (ThingsBoard)
-
-Acceso desde navegador:
-
-```
-http://172.20.28.165:8080
-```
-
-### Credenciales por defecto:
-
-```
-usuario: tenant@thingsboard.org
-contraseña: tenant
-```
-
----
-
-## 🔑 11. Creación de Dispositivo IoT
-
-1. Ir a **Devices**
-2. Click en **Add Device**
-3. Asignar nombre (ej: Sensor_Prueba)
-4. Copiar **Access Token**
-
----
-
-## 🧪 12. Simulador IoT (Python)
-
-### Crear proyecto:
-
-```bash
-mkdir ~/iot-project
-cd ~/iot-project
-```
-
-### Archivo: `simulator.py`
-
+Crea el archivo `simulator.py`:
 ```python
 import requests
-import random
 import time
+import random
+from datetime import datetime
 
-THINGSBOARD_HOST = "http://localhost:8080"
-ACCESS_TOKEN = "TU_TOKEN_AQUI"
+TOKEN = "TU_ACCESS_TOKEN_AQUI"
+URL = f"http://localhost:8080/api/v1/{TOKEN}/telemetry"
 
-url = f"{THINGSBOARD_HOST}/api/v1/{ACCESS_TOKEN}/telemetry"
+print("🚀 Simulador IoT HTTP iniciado...")
 
 while True:
     data = {
         "temperature": round(random.uniform(20, 30), 2),
-        "humidity": round(random.uniform(40, 70), 2)
+        "humidity":    round(random.uniform(40, 70), 2),
+        "pressure":    round(random.uniform(900, 1100), 2),
+        "timestamp":   datetime.now().isoformat()
     }
 
     try:
-        response = requests.post(url, json=data)
-        print("Enviado:", data, "Status:", response.status_code)
+        response = requests.post(URL, json=data)
+        print(f"[HTTP] Enviado: {data} → Status: {response.status_code}")
     except Exception as e:
-        print("Error:", e)
+        print(f"[ERROR] {e}")
 
-    time.sleep(5)
+    time.sleep(3)
 ```
 
----
-
-## 📦 13. Instalación de dependencias
-
-```bash
-pip3 install requests
-```
-
----
-
-## ▶️ 14. Ejecución
-
+Ejecutar:
 ```bash
 python3 simulator.py
 ```
 
+Salida esperada:
+```
+[HTTP] Enviado: {'temperature': 24.5, 'humidity': 55.2, ...} → Status: 200
+```
+
 ---
 
-## 📊 15. Visualización de Datos
+### Opción B: Envío por MQTT (protocolo profesional IoT)
+
+MQTT es un protocolo ligero diseñado específicamente para IoT, más eficiente que HTTP para envíos frecuentes.
+
+Crea el archivo `simulator_mqtt.py`:
+```python
+import paho.mqtt.client as mqtt
+import time
+import random
+import json
+from datetime import datetime
+
+TOKEN  = "TU_ACCESS_TOKEN_AQUI"
+BROKER = "localhost"
+PORT   = 1883
+TOPIC  = "v1/devices/me/telemetry"
+
+client = mqtt.Client()
+client.username_pw_set(TOKEN)
+client.connect(BROKER, PORT, 60)
+client.loop_start()
+
+print("🚀 Simulador MQTT iniciado...")
+
+while True:
+    data = {
+        "temperature": round(random.uniform(20, 30), 2),
+        "humidity":    round(random.uniform(40, 70), 2),
+        "pressure":    round(random.uniform(900, 1100), 2),
+        "timestamp":   datetime.now().isoformat()
+    }
+
+    client.publish(TOPIC, json.dumps(data))
+    print(f"[MQTT] Enviado: {data}")
+    time.sleep(3)
+```
+
+Ejecutar:
+```bash
+python3 simulator_mqtt.py
+```
+
+---
+
+## 📊 Paso 10 — Visualizar los datos
 
 En ThingsBoard:
 
-* Devices → Sensor_Prueba
-* Latest Telemetry
+1. Ve a **Devices** → `Sensor_Prueba_1`
+2. Abre la pestaña **Latest Telemetry**
 
-Datos esperados:
+Verás los datos actualizándose en tiempo real:
 
-* temperature
-* humidity
-
----
-
-## 🌐 16. Acceso a Servicios
-
-| Servicio    | URL                       |
-| ----------- | ------------------------- |
-| ThingsBoard | http://172.20.28.165:8080 |
-| NGINX       | http://172.20.28.165:8090 |
+| Clave | Descripción |
+|---|---|
+| `temperature` | Temperatura simulada (°C) |
+| `humidity` | Humedad relativa (%) |
+| `pressure` | Presión atmosférica (hPa) |
 
 ---
 
-## ⚠️ 17. Problemas Comunes
+## 🌐 Resumen de acceso a servicios
 
-### ❌ No conecta SSH
+| Servicio | URL | Puerto |
+|---|---|---|
+| ThingsBoard (IoT) | `http://IP_SERVIDOR:8080` | 8080 |
+| NGINX (Web) | `http://IP_SERVIDOR:8090` | 8090 |
 
-* Verificar usuario correcto
-* Verificar servicio SSH activo
+Desde cualquier dispositivo en la misma red puedes abrir estas URLs en el navegador.
 
-### ❌ No abre en red
+---
 
-* Dispositivos en diferente red
-* Restricciones de red (universidad)
-
-### ❌ Puerto ocupado
-
+## 🚀 Comandos útiles
 ```bash
+# Ver contenedores activos
+docker ps
+
+# Levantar servicios en segundo plano
+docker compose up -d
+
+# Detener servicios
+docker compose down
+
+# Ver logs de los servicios
+docker compose logs
+
+# Probar que NGINX responde localmente
+curl http://localhost:8090
+
+# Ver qué proceso usa un puerto
 sudo lsof -i :8080
 sudo lsof -i :8090
 ```
 
 ---
 
-## 🧠 18. Arquitectura Actual
+## ⚠️ Problemas comunes
 
+### ❌ Error: `port is already allocated`
+Otro proceso ya usa ese puerto.
+```bash
+sudo lsof -i :8080   # Ver qué lo ocupa
 ```
-Mini-PC (Servidor)
-│
-├── Puerto 8080 → ThingsBoard
-└── Puerto 8090 → NGINX
-```
+
+Soluciones:
+- Cambiar el puerto en el `docker-compose.yml`
+- Detener el contenedor que ocupa el puerto: `docker stop <nombre_contenedor>`
 
 ---
 
-## 🚀 19. Próximos Pasos
-
-* Integración con MQTT (Mosquitto)
-* Node-RED para automatización
-* Reverse Proxy con NGINX
-* Dashboards avanzados
-* Acceso remoto (VPN / túneles)
+### ❌ No puedo acceder desde otro dispositivo
+Posibles causas:
+- Los dispositivos están en redes diferentes (WiFi vs cableado)
+- La red tiene restricciones (redes universitarias, hotspots)
+- El firewall del servidor bloquea los puertos
 
 ---
 
-## ✅ Estado del Proyecto
+### ❌ Error 401 en ThingsBoard
+El Access Token es incorrecto. Vuelve a copiarlo desde **Devices → Credentials**.
 
-✔️ Servidor Ubuntu configurado
-✔️ Acceso remoto SSH funcional
-✔️ Docker y contenedores activos
-✔️ ThingsBoard operativo
-✔️ Simulación de datos IoT en tiempo real
-✔️ Visualización en dashboards
+---
+
+### ❌ No aparecen datos en Latest Telemetry
+- Verifica que el simulador esté corriendo sin errores
+- Confirma que ThingsBoard está activo: `docker ps`
+- Comprueba que la URL del simulador sea correcta
+
+---
+
+### ❌ SSH no conecta
+- Verifica que el servicio SSH está activo: `sudo systemctl status ssh`
+- Confirma que el usuario y la IP son correctos
+
+---
+
+## ✅ Estado del proyecto
+
+- [x] Servidor Ubuntu configurado
+- [x] Acceso remoto SSH funcional
+- [x] Docker y contenedores activos
+- [x] NGINX operativo (puerto 8090)
+- [x] ThingsBoard operativo (puerto 8080)
+- [x] Simulación de datos IoT por HTTP
+- [x] Simulación de datos IoT por MQTT
+- [x] Visualización en dashboards en tiempo real
+
+---
+
+## 🔥 Próximos pasos
+
+- [ ] Crear dashboards personalizados en ThingsBoard
+- [ ] Configurar alarmas y reglas de procesamiento
+- [ ] Integrar broker MQTT externo (Mosquitto)
+- [ ] Conectar dispositivos reales (ESP32, Arduino)
+- [ ] Configurar Reverse Proxy con NGINX
+- [ ] Integrar Node-RED para automatización
+- [ ] Agregar Grafana para visualizaciones avanzadas
+- [ ] Configurar acceso remoto seguro (VPN / túneles)
 
 ---
 
 ## 👨‍💻 Autor
 
-Proyecto desarrollado como entorno de aprendizaje y despliegue de arquitectura IoT local.
-
+**Julián Felipe**  
+Proyecto desarrollado como entorno de aprendizaje y despliegue de arquitectura IoT local.  
+Enfocado en: IoT · Sistemas embebidos · Servidores locales · Docker
