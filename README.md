@@ -2,90 +2,84 @@
 
 ## 📌 Descripción del proyecto
 
-Este proyecto consiste en la configuración de un **servidor local** sobre una mini-PC utilizando **Ubuntu 22.04.5 LTS** y **Docker Compose**, con el objetivo de desplegar servicios de manera modular, escalable y reproducible.
+Configuración de un **servidor local en mini-PC** usando Ubuntu 22.04.5 LTS y Docker Compose, orientado a servicios IoT y web.
 
 ---
 
 # 🧠 1. ¿Qué es un servidor?
 
-Un **servidor** es un sistema que proporciona servicios a otros dispositivos (clientes) dentro de una red.
+Un servidor es un sistema que proporciona servicios a otros dispositivos en una red.
 
-### Ejemplos de servicios:
+Ejemplos:
 
-* Servidor web (nginx, Apache)
-* Servidor IoT (MQTT, Node-RED)
-* Base de datos
-* Sistemas distribuidos (ROS2)
+* Web (nginx)
+* IoT (ThingsBoard, MQTT)
+* Bases de datos
 
 ---
 
-# 🐧 2. Sistema Operativo: Ubuntu 22.04.5 LTS
+# 🐧 2. Sistema Operativo
 
-### ¿Qué significa LTS?
+Ubuntu 22.04.5 LTS
 
-**LTS (Long Term Support)** garantiza:
+**LTS (Long Term Support):**
 
-* Soporte por 5 años
-* Estabilidad
-* Actualizaciones de seguridad
-
-Ideal para servidores.
+* 5 años de soporte
+* Alta estabilidad
+* Ideal para servidores
 
 ---
 
 # 🔄 3. Actualización del sistema
-
-Después de instalar Ubuntu, es fundamental actualizar los paquetes.
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
-### Explicación:
-
-* `apt update`: actualiza la lista de paquetes disponibles
-* `apt upgrade`: instala actualizaciones
-
 ---
 
-# 🌐 4. Verificación de red
-
-Para identificar la IP del servidor:
+# 🌐 4. Identificación de red
 
 ```bash
 ip a
 ```
 
-Buscar:
+Buscar una línea como:
 
+```text
+inet 172.20.25.173/21
 ```
-inet 192.168.x.x
-```
 
-### ¿Qué es una IP?
-
-Es la dirección única que identifica un dispositivo en la red.
+👉 Esta es la IP del servidor.
 
 ---
 
-# 🔐 5. Acceso remoto con SSH
+## 🧠 Concepto: Dirección IP
 
-SSH permite controlar el servidor de forma remota.
+Es el identificador único de un dispositivo dentro de una red.
 
-## Instalación:
+Ejemplo:
+
+```text
+Servidor → 172.20.25.173
+```
+
+---
+
+# 🔐 5. Acceso remoto (SSH)
 
 ```bash
 sudo apt install openssh-server -y
 ```
 
-## Verificación:
+Verificar:
 
 ```bash
 sudo systemctl status ssh
 ```
 
-## Conexión desde otro equipo:
+Conexión desde otro equipo:
 
 ```bash
 ssh usuario@IP_SERVIDOR
@@ -95,44 +89,13 @@ ssh usuario@IP_SERVIDOR
 
 # 🐳 6. Docker
 
-## ¿Qué es Docker?
-
-Docker es una plataforma que permite ejecutar aplicaciones en **contenedores**.
-
-### Contenedor:
-
-Un entorno aislado que incluye:
-
-* aplicación
-* dependencias
-* configuración
-
----
-
-## Instalación (si no está instalado)
-
-```bash
-sudo apt install docker.io -y
-```
-
-## Verificar instalación
+Verificar instalación:
 
 ```bash
 docker --version
 ```
 
----
-
-## Activar servicio
-
-```bash
-sudo systemctl enable docker
-sudo systemctl start docker
-```
-
----
-
-## Ejecutar prueba
+Prueba:
 
 ```bash
 docker run hello-world
@@ -142,19 +105,13 @@ docker run hello-world
 
 # ⚙️ 7. Docker Compose
 
-## ¿Qué es Docker Compose?
-
-Permite definir y ejecutar múltiples contenedores usando un archivo YAML.
-
----
-
-## Verificar instalación
+Verificar:
 
 ```bash
 docker compose version
 ```
 
-## Instalación (si no está disponible)
+Instalar si es necesario:
 
 ```bash
 sudo apt install docker-compose-plugin -y
@@ -162,150 +119,170 @@ sudo apt install docker-compose-plugin -y
 
 ---
 
-# 🔓 8. Ejecutar Docker sin sudo
-
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
----
-
-# 📁 9. Estructura del servidor
-
-Se recomienda organizar los servicios:
+# 📁 8. Estructura del servidor
 
 ```bash
 mkdir -p ~/server/nginx
 cd ~/server/nginx
 ```
 
-Estructura sugerida:
-
-```
-server/
- ├── nginx/
- ├── iot/
- ├── db/
- └── monitoring/
-```
-
 ---
 
-# 🌍 10. Primer servicio: NGINX
+# 🌍 9. Servicio Web con NGINX
 
-## Crear archivo docker-compose.yml
-
-```bash
-nano docker-compose.yml
-```
-
-## Contenido:
+## docker-compose.yml
 
 ```yaml
 services:
   nginx:
     image: nginx:latest
-    container_name: nginx_server
+    container_name: nginx_web_server
     ports:
-      - "8080:80"
+      - "8090:80"
     restart: unless-stopped
 ```
 
 ---
 
-## Explicación:
-
-* `image`: imagen base
-* `container_name`: nombre del contenedor
-* `ports`: mapeo de puertos (host:contenedor)
-* `restart`: política de reinicio
-
----
-
-# ▶️ 11. Levantar el servicio
+## ▶️ Levantar servicio
 
 ```bash
 docker compose up -d
 ```
 
-### Parámetro:
-
-* `-d`: modo background
-
 ---
 
-# 🔍 12. Verificar contenedores
+## 🔍 Verificar contenedores
 
 ```bash
 docker ps
 ```
 
+Debe aparecer:
+
+```text
+nginx_web_server → 0.0.0.0:8090->80/tcp
+thingsboard-edge → 0.0.0.0:8080->8080/tcp
+```
+
 ---
 
-# 🌐 13. Acceso al servicio
+# 🌐 10. Acceso a servicios
 
-Desde navegador:
+## ThingsBoard
 
-```
+```text
 http://IP_SERVIDOR:8080
 ```
 
+## NGINX
+
+```text
+http://IP_SERVIDOR:8090
+```
+
 ---
 
-# 📊 14. Comandos útiles
+# 🔥 11. Prueba desde otros dispositivos
 
-## Ver contenedores activos
+Desde celular o laptop en la misma red:
+
+```text
+http://172.20.25.173:8080
+http://172.20.25.173:8090
+```
+
+---
+
+# ⚠️ 12. Solución de problemas
+
+## 🔸 Verificar servicio local
+
+```bash
+curl http://localhost:8090
+```
+
+---
+
+## 🔸 Verificar puertos ocupados
+
+```bash
+sudo lsof -i :8080
+sudo lsof -i :8090
+```
+
+---
+
+## 🔸 Ver contenedores activos
 
 ```bash
 docker ps
 ```
 
-## Ver todos los contenedores
+---
 
-```bash
-docker ps -a
+## 🔸 Problemas comunes
+
+### ❌ Puerto ocupado
+
+Error:
+
+```text
+port is already allocated
 ```
 
-## Detener servicios
+Solución:
+
+* Cambiar puerto
+* Detener contenedor existente
+
+---
+
+### ❌ No abre desde otro dispositivo
+
+Posibles causas:
+
+* Firewall
+* Red diferente
+* Hotspot o red restringida
+
+---
+
+# 🧠 13. Arquitectura actual
+
+```text
+Mini-PC (Servidor)
+│
+├── Puerto 8080 → ThingsBoard (IoT)
+└── Puerto 8090 → nginx (web)
+```
+
+---
+
+# 🚀 14. Comandos útiles
 
 ```bash
+docker ps
+docker compose up -d
 docker compose down
-```
-
-## Ver logs
-
-```bash
 docker compose logs
 ```
 
 ---
 
-# 🧱 15. Ventajas de Docker Compose
+# 🔥 15. Próximos pasos
 
-* Aislamiento de servicios
-* Escalabilidad
-* Reproducibilidad
-* Portabilidad
-* Fácil mantenimiento
-
----
-
-# 🚀 16. Próximos pasos
-
-Posibles extensiones del servidor:
-
+* Reverse proxy con nginx
+* Integración con Node-RED
 * MQTT (Mosquitto)
-* Node-RED
-* InfluxDB + Grafana
-* ThingsBoard
-* ROS2 distribuido
+* Dashboards (Grafana)
+* Arquitectura IoT completa
 
 ---
 
 # 👨‍💻 Autor
 
-Proyecto desarrollado por Julián Felipe
-Enfocado en sistemas embebidos, IoT y servidores locales.
+Julián Felipe
+Proyecto enfocado en IoT, sistemas embebidos y servidores locales.
 
 ---
