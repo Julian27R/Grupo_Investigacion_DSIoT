@@ -406,6 +406,29 @@ docker compose logs -f
 
 ---
 
+## 💾 Configurar Swap (evita congelamiento del sistema)
+
+Sin swap, si ThingsBoard necesita más memoria de la disponible el sistema se congela completamente. Es **obligatorio** configurarlo antes de levantar ThingsBoard.
+
+```bash
+# Crear 4 GB de swap
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Hacer el swap permanente (sobrevive reinicios)
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Verificar que quedó activo
+free -h
+# Deberías ver: Swap: 4.0Gi
+```
+
+> ℹ️ El swap usa el disco como extensión de RAM. Es más lento que la RAM pero evita que el sistema se bloquee cuando la memoria se agota.
+
+---
+
 ## ⚠️ Problemas comunes
 
 ### ❌ Puerto 8080 ocupado
@@ -432,7 +455,26 @@ El Access Token es incorrecto. Vuelve a copiarlo desde **Devices → Credentials
 - Confirma que ThingsBoard está activo: `docker ps`
 - Comprueba que la URL del simulador usa el token correcto
 
-### ❌ SSH no conecta
+### ❌ El sistema se congela completamente (mouse y teclado no responden)
+
+**Causa:** ThingsBoard consumió toda la RAM disponible y no hay swap configurado.
+
+**Solución inmediata:** Reinicio físico — mantén el botón de poder 5-10 segundos.
+
+**Solución definitiva:** Configura swap antes de levantar ThingsBoard (ver sección anterior).
+
+Para monitorear la RAM mientras ThingsBoard arranca:
+
+```bash
+# En una terminal separada
+watch -n 2 free -h
+```
+
+Si `available` baja de 500 MB, ThingsBoard usará swap (más lento pero sin congelar).
+
+### ❌ SSH no conecta después de un congelamiento
+
+Si el servidor se congeló completamente, SSH tampoco responderá (`No route to host`). En ese caso es necesario el reinicio físico.
 
 ```bash
 sudo systemctl status ssh
@@ -474,6 +516,7 @@ ip a
 
 ## ✅ Estado del proyecto
 
+- [x] Swap de 4 GB configurado y permanente
 - [x] Servidor Ubuntu configurado
 - [x] Acceso remoto SSH funcional
 - [x] Docker y contenedores activos
