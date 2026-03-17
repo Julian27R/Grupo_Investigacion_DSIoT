@@ -273,28 +273,75 @@ import time
 import random
 from datetime import datetime
 
-TOKEN = "TU_ACCESS_TOKEN_AQUI"
-URL = f"http://localhost:8080/api/v1/{TOKEN}/telemetry"
+# ─── Configuración ────────────────────────────────────────────
+TOKEN  = "TU_ACCESS_TOKEN_AQUI"       # Cópialo desde Devices → Credentials
+SERVER = "http://172.20.28.165:8080"  # IP de tu servidor
+URL    = f"{SERVER}/api/v1/{TOKEN}/telemetry"
+
+# Coordenadas fijas del dispositivo (Bogotá)
+LATITUDE  = 4.7110
+LONGITUDE = -74.0721
+# ──────────────────────────────────────────────────────────────
 
 print("🚀 Simulador IoT HTTP iniciado...")
+print(f"   Servidor : {SERVER}")
+print(f"   Ubicación: {LATITUDE}, {LONGITUDE}")
+print("-" * 50)
 
 while True:
     data = {
-        "temperature": round(random.uniform(20, 30), 2),
-        "humidity":    round(random.uniform(40, 70), 2),
-        "pressure":    round(random.uniform(900, 1100), 2),
+        # Sensores
+        "temperature": round(random.uniform(20, 30), 2),  # °C
+        "humidity":    round(random.uniform(40, 70), 2),  # %
+
+        # Ubicación (para el mapa en ThingsBoard)
+        "latitude":    LATITUDE,
+        "longitude":   LONGITUDE,
+
+        # Metadata
         "timestamp":   datetime.now().isoformat()
     }
+
     try:
-        response = requests.post(URL, json=data)
-        print(f"[HTTP] Enviado: {data} → Status: {response.status_code}")
+        response = requests.post(URL, json=data, timeout=5)
+        if response.status_code == 200:
+            print(f"[OK]    {datetime.now().strftime('%H:%M:%S')} "
+                  f"| temp={data['temperature']}°C "
+                  f"| hum={data['humidity']}%")
+        else:
+            print(f"[WARN]  Status {response.status_code} — revisa el Access Token")
+    except requests.exceptions.ConnectionError:
+        print(f"[ERROR] No se puede conectar a {SERVER} — ¿está ThingsBoard corriendo?")
+    except requests.exceptions.Timeout:
+        print(f"[ERROR] Timeout — el servidor tardó demasiado en responder")
     except Exception as e:
         print(f"[ERROR] {e}")
+
     time.sleep(3)
 ```
 
+Copiar al servidor y ejecutar:
+
 ```bash
-python3 simulator.py
+# Copiar al servidor
+scp simulator.py pci@172.20.28.165:~/Documents/thingsboard/
+
+# Editar el token en el servidor
+nano ~/Documents/thingsboard/simulator.py
+
+# Ejecutar
+python3 ~/Documents/thingsboard/simulator.py
+```
+
+Salida esperada:
+
+```
+🚀 Simulador IoT HTTP iniciado...
+   Servidor : http://172.20.28.165:8080
+   Ubicación: 4.711, -74.0721
+--------------------------------------------------
+[OK]    21:45:03 | temp=24.5°C | hum=55.2%
+[OK]    21:45:06 | temp=26.1°C | hum=61.8%
 ```
 
 ### Opción B: Envío por MQTT
@@ -338,15 +385,64 @@ python3 simulator_mqtt.py
 
 ---
 
-## 📊 Paso 10 — Visualizar los datos
+## 📊 Paso 10 — Crear dashboard personalizado en ThingsBoard
 
-En ThingsBoard: **Devices** → `Sensor_Prueba_1` → pestaña **Latest Telemetry**
+### 10.1 — Crear el dashboard
 
-| Clave | Descripción |
-|---|---|
-| temperature | Temperatura simulada (°C) |
-| humidity | Humedad relativa (%) |
-| pressure | Presión atmosférica (hPa) |
+1. Menú izquierdo → **Dashboards** → clic en **+**
+2. Selecciona **Create new dashboard**
+3. Nombre: `Monitor IoT - Sensor Prueba`
+4. Clic en **Add** → **Open dashboard** → ícono de **lápiz** (editar)
+
+### 10.2 — Widget: Tarjetas de valor actual
+
+1. Clic en **Add widget** → categoría **Cards** → **Value card**
+2. Datasource → Device: `Sensor_Prueba_1` → Data key: `temperature`
+3. Título: `Temperatura actual` → **Add**
+
+Repite para `humidity` con título `Humedad actual`.
+
+### 10.3 — Widget: Gauges analógicos
+
+1. Clic en **Add widget** → categoría **Gauge** → **Analogue gauges**
+2. Configuración para temperatura:
+   - Datasource → Device: `Sensor_Prueba_1` → Data key: `temperature`
+   - Min: `0` / Max: `50` / Título: `Temperatura (°C)`
+3. Repite para humedad:
+   - Data key: `humidity` / Min: `0` / Max: `100` / Título: `Humedad (%)`
+
+### 10.4 — Widget: Gráfica histórica
+
+1. Clic en **Add widget** → categoría **Charts** → **Line chart**
+2. Datasource → Device: `Sensor_Prueba_1`
+3. Agrega data keys: `temperature` y `humidity`
+4. Time window: `Last 30 minutes` / Título: `Histórico de sensores`
+
+### 10.5 — Widget: Mapa de ubicación
+
+1. Clic en **Add widget** → categoría **Maps** → **OpenStreetMap**
+2. Datasource → Device: `Sensor_Prueba_1`
+3. Latitude key: `latitude` / Longitude key: `longitude`
+4. Label: `Sensor_Prueba_1`
+
+> ℹ️ El simulador ya envía `latitude` y `longitude` con coordenadas de Bogotá — el dispositivo aparecerá en el mapa automáticamente.
+
+### 10.6 — Guardar
+
+1. Organiza los widgets arrastrándolos
+2. Clic en el ícono **✓** (guardar) → **Save**
+
+### Resultado esperado
+
+```
+┌─────────────────┬──────────────────────────────────┐
+│  Temp: 24.5°C   │  Hum: 55.2%                      │
+├─────────────────┼──────────────────────────────────┤
+│  Gauge Temp     │  Gauge Humedad  │  Mapa Bogotá   │
+├─────────────────┴─────────────────┴────────────────┤
+│         Gráfica histórica (últimos 30 min)         │
+└────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -582,7 +678,8 @@ ip a
 - [x] Docker y contenedores activos
 - [x] NGINX operativo (puerto 8090) — via docker compose
 - [x] ThingsBoard v4.2.1.1 operativo (puerto 8080) — via docker compose (`tb-postgres`)
-- [x] Simulación de datos IoT por HTTP
+- [x] Dashboard personalizado creado (gauges, gráfica histórica, mapa, tarjetas)
+- [x] Simulación de datos IoT por HTTP (temperatura, humedad, coordenadas)
 - [x] Simulación de datos IoT por MQTT
 - [x] Visualización en dashboards en tiempo real
 
@@ -590,6 +687,7 @@ ip a
 
 ## 🔥 Próximos pasos
 
+- [x] ~~Crear dashboards personalizados en ThingsBoard~~
 - [ ] **Asignar IP estática al servidor** (para que la IP no cambie entre reinicios)
 - [ ] Crear dashboards personalizados en ThingsBoard
 - [ ] Configurar alarmas y reglas de procesamiento
