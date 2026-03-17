@@ -390,7 +390,7 @@ Si necesitas eliminar ThingsBoard completamente y empezar de nuevo:
 
 ```bash
 # 1. Bajar el servicio y eliminar volúmenes
-cd ~/server/thingsboard
+cd ~/Documents/thingsboard
 docker compose down --volumes --remove-orphans
 
 # 2. Eliminar la imagen (opcional, para forzar descarga fresca)
@@ -399,10 +399,21 @@ docker rmi thingsboard/tb-postgres
 # 3. Verificar que el puerto quedó libre
 sudo lsof -i :8080
 
-# 4. Levantar de nuevo
+# 4. Levantar de nuevo (reinstala la BD automáticamente)
 docker compose up -d
 docker compose logs -f
 ```
+
+Espera hasta ver en los logs:
+```
+Installation finished successfully!
+Started ThingsboardServerApplication in XX seconds
+```
+
+> ⚠️ **ADVERTENCIA — `docker system prune -a --volumes`**  
+> Este comando de limpieza de disco **elimina los volúmenes de ThingsBoard**, borrando toda la base de datos.  
+> Si lo ejecutas, debes reinstalar ThingsBoard con `docker compose down && docker compose up -d`.  
+> Los contenedores activos no se eliminan, pero sus volúmenes de datos sí.
 
 ---
 
@@ -472,6 +483,54 @@ watch -n 2 free -h
 
 Si `available` baja de 500 MB, ThingsBoard usará swap (más lento pero sin congelar).
 
+### ❌ VS Code Remote-SSH pide contraseña y la rechaza
+
+Configura autenticación por clave SSH para evitar el problema:
+
+```bash
+# 1. Generar clave SSH (Enter × 3, sin passphrase)
+ssh-keygen -t ed25519 -C "vscode-servidor-iot"
+
+# 2. Copiar la clave al servidor (última vez que pide contraseña)
+ssh-copy-id pci@IP_DEL_SERVIDOR
+
+# 3. Probar que entra sin contraseña
+ssh pci@IP_DEL_SERVIDOR
+```
+
+Después de esto VS Code conectará sin pedir contraseña.
+
+### ❌ Disco lleno — "No space left on device"
+
+```bash
+# Ver estado del disco
+df -h
+
+# Limpiar imágenes y capas Docker sin usar
+# ⚠️ ADVERTENCIA: --volumes elimina la BD de ThingsBoard (ver sección Reinstalar)
+docker system prune -a
+
+# Limpiar apt y logs
+sudo apt clean
+sudo apt autoremove -y
+sudo journalctl --vacuum-size=100M
+
+# Ver qué carpetas ocupan más espacio
+du -sh /home/pci/* 2>/dev/null | sort -rh | head -10
+```
+
+### ❌ "Database error" al entrar a ThingsBoard
+
+Ocurre cuando los volúmenes de la base de datos fueron eliminados (por ejemplo con `docker system prune --volumes`). Solución:
+
+```bash
+cd ~/Documents/thingsboard
+docker compose down
+docker compose up -d
+docker compose logs -f
+# Espera: "Installation finished successfully!"
+```
+
 ### ❌ SSH no conecta después de un congelamiento
 
 Si el servidor se congeló completamente, SSH tampoco responderá (`No route to host`). En ese caso es necesario el reinicio físico.
@@ -519,6 +578,7 @@ ip a
 - [x] Swap de 4 GB configurado y permanente
 - [x] Servidor Ubuntu configurado
 - [x] Acceso remoto SSH funcional
+- [x] Autenticación SSH por clave configurada (sin contraseña)
 - [x] Docker y contenedores activos
 - [x] NGINX operativo (puerto 8090) — via docker compose
 - [x] ThingsBoard v4.2.1.1 operativo (puerto 8080) — via docker compose (`tb-postgres`)
